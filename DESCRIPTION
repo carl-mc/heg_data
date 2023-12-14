@@ -1,0 +1,13 @@
+Package: hegdata
+Title: Data on Historical Ethnic Geography
+Version: 1.0
+Authors@R: c(person("Carl", "Müller-Crepon", email = "c.a.muller-crepon@lse.ac.uk", role = c("aut", "cre")),
+             person("Guy", "Schvitz", email = "Guy.SCHVITZ@ec.europa.eu", role = c("aut")),
+             person("Lars-Erik", "Cederman", email = "lcederman@ethz.ch", role = c("aut")))
+Description: Provides an interface to retrieve the Historical Ethnic Geography dataset published in Müller-Crepon, Schvitz and Cederman (Journal of Conflict Resolution, forthcoming).
+Depends: R (>= 3.1.0)
+License: GPL-3
+RoxygenNote: 7.2.3
+Encoding: UTF-8
+Imports: raster, 
+  R6

@@ -1,0 +1,110 @@
+---
+title: "hegdata: Data on Historical Ethnic Geography in Europe"
+author: "Carl Müller-Crepon"
+output:
+   md_document:
+      variant: gfm
+
+---
+
+
+# hegdata: Data on Historical Ethnic Geography in Europe
+
+## Introduction
+
+This R-package provides an interface to access the Historical Ethnic Geography (HEG) data that covers Europe between 1886 and 2020. HEG address the lack of time-varying and historical data on ethnic geography that spans across state borders. It is based on a collection of 73 digitized and standardized historical ethnic maps of Europe coupled with hand-coded data on mostly violent and at times peaceful periods of major ethno-demographic change. The data map ethnic geography in Europe--defined expansively to include the Caucasus, the Levant, and Northern Africa--from 1886 to 2020 using time-variant rasters that provide estimates of the ethnic composition of local populations. Compared to prior polygon-based data, HEG efficiently combines information across multiple maps, approximates local ethnic diversity, and avoids imposing arbitrary population thresholds beyond those affecting the original map material. The data are time-variant, based on historical information, and independent of changing state borders. Because the data is based on historical maps, it only captures spatially broad patterns of ethnic geography rather than local ethnic diversity resulting from individual-level migration. 
+
+The HEG data come in two variants: (1) a _baseline_ version that averages across all maps for a given group, country, and period between major ethno-demographic shifts and (2) an _interpolated_ version that captures slowly changing ethnic maps in between periods of major ethno-demographic shifts. For most cases, the data are very similar.
+
+Further details on the construction of the dataset are presented in Müller-Crepon et al. (forthcoming).
+
+The below README provides an overview over the main functionalities of the package. Please see the package documentation for further details.
+
+When using the \code{hegdata} package, please cite:
+Müller-Crepon, Carl, Guy Schvitz, and Lars-Erik Cederman (2023). 
+"Right-Peopling" the State: Nationalism, Historical Legacies, and Ethnic Cleansing in Europe, 1886-2020. _Journal of Conflict Resolution_, forthcoming.
+
+Please note that we intend this package to be further developed by ourselves as well as other members of the community. Please do not hesitate to submit issues, contribute directly, or get in touch with us. 
+
+
+## Installation
+
+Please install the package directly from this github page. 
+
+```{r, eval = F}
+# Download SpatialLattice package
+library(devtools)
+install_github(repo = "carl-mc/hegdata")
+```
+
+
+## Initializing an HEG data object
+
+The HEG data comes as set of time-varying rasters of ethnic groups' local population shares. The raw data is structured around country-group-periods. The package facilitates the stitching together of group-level rasters across country-borders. To do so, we first initialize a \code{hegdata} object, which contains all relevant functions and paths to the raw data shipped with the package. 
+
+```{r, eval = T, warning=FALSE, message=F}
+# Load library
+library(hegdata)
+library(raster)
+
+# Initializing hegdata object
+heg.obj <- hegdata$new()
+
+```
+
+
+### Query group-level rasters per year
+Using the HEG object, we can now query the estimated local shares (bounded between 0 and 1) for any group and year from HEG. The shares depict the share of historical maps in a given period that depict the local population in a grid cell as belonging to a given group, while accounting for overlapping settlement areas of different groups. As we show in the original article, the share correlate strongly with local population shares of a group. 
+
+```{r, eval = T, warning=FALSE, message=F}
+
+# All group names
+head(heg.obj$all_groups())
+
+# A raster
+hung.r <- heg.obj$loadHEGGroup(group = "hungarian", year = 1900)
+
+# Plot
+par(mar = c(0,0,2,0))
+plot(hung.r, main = "Hungarians, 1900")
+```
+
+## Interpolated vs. baseline version
+As explained in the article presenting the data, we have prepared a temporally interpolated version of the HEG data that takes into account slow changes in ethnic maps over time (in addition to the rapid changes captured by our main periodization), thus producing data that changes every year. The package offers access to this interpolated version of the data via the following function.
+
+```{r, eval = T, warning=FALSE, message=F}
+
+# All group names
+head(heg.obj$all_groups())
+
+# A raster
+french.r <- heg.obj$loadHEGGroup_interpol(group = "french", year = 2020)
+
+# Plot
+par(mar = c(0,0,2,0))
+plot(french.r, main = "French, 2020")
+```
+
+
+
+## Raw data and data structure
+
+_Directory_: The raw raster data are stored in the directory inst/extdata/. 
+
+_Meta data_: All meta data is contained in subdirectory meta. The directory contains, in particular, the master raster, main_raster.tif which is needed to "stitch together" the HEG data. In addition, country_group_periods.csv and country_group_periods_tv.csv contain the meta data for country-group-periods for the baseline and interpolated (*_tv) versions of the HEG data, respectively. Each row in the metadata corresponds to one raster .tif file in subdirectories raster and raster_tv (again, for the baseline and interpolate versions, respectively). These rasters can be stitched onto the master raster using the values in columns minrow, maxrow, mincol, and maxcol which indicate the rows and columns of the master raster onto which a raster file fits
+
+_Country-group-period rasters_: The baseline version of HEG is stored in subdirectory raster and the interpolated version in raster_tv. The name of each raster consists of the Gleditsch & Ward country code, the period start and end years, the group name and language tree level, separated by "_". Rasters are stored as .tif files, with each cell being either missing (if a cell is outside a country) or containing a value between 0 and 1 which encodes that share of maps that show the respective group living in a cell, adjusted for overlaps between settlement areas. Country-periods in which a given group is wholly absent are not covered by these raster file since they have a uniform value of 0. While .tif files in the baseline version have only one layer, those in the interpolated version have one layer for each year between the start and end year of the period. 
+
+_Processing_: If not using the R code provided through the \code{hegdata} package, the HEG data can be stitched together using the following steps:
+
+* Specify a group and a year and decide whether the baseline or interpolated HEG data should be queried
+* Gather all rows in the respective metadata table that belong to that group and cover the respective year
+* For each row:
+  + Open the raster file using the filename indicated by the respective variable in the metadata. 
+  + If using the interpolated HEG version, subset the raster to the correct layer derived as 1 + year - start
+  + Replace the values in the respective rows and columns of the main raster (``main_raster[minrow:maxrow, mincol:maxcol]``, indexing starting at 1) with the cell values from the raster _if these are not missing_. 
+
+The resulting raster should depict positive values wherever the group is coded as being present in a given year, an NA value outside the coverage of HEG, and a value of 0 everywhere else. 
+
+## Feedback, comments, questions
+We are very grateful for any bug reports, feedback, questions, or contributions to this package. Please report any issues here or write to c.a.muller-crepon [at] lse.ac.uk .
